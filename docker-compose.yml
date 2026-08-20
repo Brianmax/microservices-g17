@@ -1,0 +1,131 @@
+services:
+  identity-service:
+    build:
+      context: .
+      args:
+        MODULE: identity-service
+    environment:
+      IDENTITY_DB_URL: jdbc:postgresql://postgres:5432/identity
+      CUSTOMER_SERVICE_BASE_URL: http://customer-service:8082
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      customer-service:
+        condition: service_started
+
+  customer-service:
+    build:
+      context: .
+      args:
+        MODULE: customer-service
+    environment:
+      CUSTOMER_DB_URL: jdbc:postgresql://postgres:5432/customer
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  banking-service:
+    build:
+      context: .
+      args:
+        MODULE: banking-service
+    environment:
+      BANKING_DB_URL: jdbc:postgresql://postgres:5432/banking
+      CUSTOMER_SERVICE_BASE_URL: http://customer-service:8082
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      customer-service:
+        condition: service_started
+
+  transfer-service:
+    build:
+      context: .
+      args:
+        MODULE: transfer-service
+    environment:
+      TRANSFER_DB_URL: jdbc:postgresql://postgres:5432/transfer
+      BANKING_SERVICE_BASE_URL: http://banking-service:8083
+      EXCHANGE_RATE_SERVICE_BASE_URL: http://exchange-rate-service:8085
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      banking-service:
+        condition: service_started
+      exchange-rate-service:
+        condition: service_started
+
+  exchange-rate-service:
+    build:
+      context: .
+      args:
+        MODULE: exchange-rate-service
+    environment:
+      EXCHANGE_RATE_API_KEY: ${EXCHANGE_RATE_API_KEY:-}
+    ports:
+      - "8085:8085"
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
+
+  # Classroom infrastructure scaffolds. Enable one lesson at a time after
+  # completing its guide under docs/exercises/. The baseline intentionally
+  # contains no discovery, gateway, or centralized-configuration wiring.
+  #
+  # eureka-server:
+  #   build:
+  #     context: ./eureka-server
+  #   environment:
+  #     SERVER_PORT: 8761
+  #   ports:
+  #     - "8761:8761"
+  #
+  # api-gateway:
+  #   build:
+  #     context: ./api-gateway
+  #   environment:
+  #     SERVER_PORT: 8080
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     - identity-service
+  #     - customer-service
+  #     - banking-service
+  #     - transfer-service
+  #     - exchange-rate-service
+  #     # Add eureka-server here after completing the Eureka lesson.
+  #
+  # config-server:
+  #   build:
+  #     context: ./config-server
+  #   environment:
+  #     SERVER_PORT: 8888
+  #   ports:
+  #     - "8888:8888"
+  #   # Add dependencies on config-server to each client only after completing
+  #   # the Config Server lesson and making config import optional or available.
+
+volumes:
+  postgres-data:

@@ -1,0 +1,10 @@
+.git
+.idea
+.vscode
+**/target
+data
+*.iml
+.DS_Store
+api-gateway
+eureka-server
+config-server

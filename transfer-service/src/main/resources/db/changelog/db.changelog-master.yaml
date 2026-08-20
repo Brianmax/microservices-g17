@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: 000-baseline
+      author: educational-project
+      changes:
+        - createTable:
+            tableName: schema_marker
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+  - include:
+      file: db/changelog/changes/001-transfers.sql
