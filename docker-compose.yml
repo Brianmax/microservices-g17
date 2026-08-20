@@ -90,17 +90,18 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
 
-  # Classroom infrastructure scaffolds. Enable one lesson at a time after
-  # completing its guide under docs/exercises/. The baseline intentionally
-  # contains no discovery, gateway, or centralized-configuration wiring.
-  #
-  # eureka-server:
-  #   build:
-  #     context: ./eureka-server
-  #   environment:
-  #     SERVER_PORT: 8761
-  #   ports:
-  #     - "8761:8761"
+  eureka-server:
+    build:
+      context: ./eureka-server
+    environment:
+      SERVER_PORT: 8761
+    ports:
+       - "8761:8761"
+    healthcheck:
+      test: ["CMD-SHELL", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
   #
   # api-gateway:
   #   build:
