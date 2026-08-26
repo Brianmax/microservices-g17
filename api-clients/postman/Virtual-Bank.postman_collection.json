@@ -1,0 +1,592 @@
+{
+  "info": {
+    "_postman_id": "d2e321a2-9d2d-4b09-90f7-aee749e62de1",
+    "name": "Virtual Bank Microservices - Todos los controladores",
+    "description": "Colección completa de los endpoints declarados en los controladores del proyecto. Todas las solicitudes pasan por el API Gateway en el puerto 8080. Ejecuta Register y Login para guardar automáticamente userId, accessToken y refreshToken. Las operaciones administrativas requieren un token con rol ADMIN.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    { "key": "gatewayBaseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "email", "value": "postman.user@example.com", "type": "string" },
+    { "key": "password", "value": "StrongPassword123!", "type": "string" },
+    { "key": "newPassword", "value": "StrongPassword456!", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "userId", "value": "00000000-0000-0000-0000-000000000001", "type": "string" },
+    { "key": "internalCustomerId", "value": "30000000-0000-0000-0000-000000000001", "type": "string" },
+    { "key": "sourceAccountId", "value": "00000000-0000-0000-0000-000000000002", "type": "string" },
+    { "key": "destinationAccountId", "value": "00000000-0000-0000-0000-000000000003", "type": "string" },
+    { "key": "transactionId", "value": "00000000-0000-0000-0000-000000000004", "type": "string" },
+    { "key": "transferId", "value": "00000000-0000-0000-0000-000000000005", "type": "string" },
+    { "key": "commandId", "value": "40000000-0000-0000-0000-000000000001", "type": "string" },
+    { "key": "sourceCurrency", "value": "USD", "type": "string" },
+    { "key": "destinationCurrency", "value": "PEN", "type": "string" },
+    { "key": "amount", "value": "100.0000", "type": "string" },
+    { "key": "idempotencyKey", "value": "postman-transfer-001", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "IdentityController - Autenticación",
+      "description": "Registro, autenticación, sesión y perfil. Register, Login y Refresh no requieren Bearer token.",
+      "item": [
+        {
+          "name": "Registrar usuario",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Postman\",\n  \"lastName\": \"User\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{gatewayBaseUrl}}/api/v1/auth/register",
+            "description": "Crea las credenciales y el perfil del cliente. Guarda el id retornado en userId. La contraseña debe tener entre 12 y 128 caracteres."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.id) pm.collectionVariables.set('userId', json.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar sesión",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{gatewayBaseUrl}}/api/v1/auth/login",
+            "description": "Guarda automáticamente accessToken y refreshToken como variables de la colección."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Renovar token",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{gatewayBaseUrl}}/api/v1/auth/refresh",
+            "description": "Rota el refresh token y reemplaza los dos tokens guardados."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{gatewayBaseUrl}}/api/v1/auth/logout",
+            "description": "Revoca la familia del refresh token. Requiere un access token vigente."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status 204', function () { pm.response.to.have.status(204); });"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar mi identidad",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/auth/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cambiar contraseña",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{password}}\",\n  \"newPassword\": \"{{newPassword}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{gatewayBaseUrl}}/api/v1/auth/password",
+            "description": "Invalida los tokens emitidos previamente. Después de ejecutarla, asigna manualmente password=newPassword y vuelve a iniciar sesión."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status 204', function () { pm.response.to.have.status(204); });"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SecurityAdminController - Seguridad",
+      "description": "Estas operaciones requieren un accessToken emitido para un usuario ADMIN. Tras cambiar roles, el usuario afectado debe iniciar sesión nuevamente.",
+      "item": [
+        {
+          "name": "Listar roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/security/roles",
+            "description": "Requiere role:read:any."
+          }
+        },
+        {
+          "name": "Listar permisos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/security/permissions",
+            "description": "Requiere permission:read:any."
+          }
+        },
+        {
+          "name": "Reemplazar roles de usuario",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roles\": [\"CUSTOMER\", \"SUPPORT\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{gatewayBaseUrl}}/api/v1/security/users/{{userId}}/roles",
+            "description": "Requiere role:assign:any. Reemplaza completamente el conjunto actual de roles."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status 204', function () { pm.response.to.have.status(204); });"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CustomerController - Clientes",
+      "description": "CRUD del perfil del cliente y operaciones internas usadas por Identity.",
+      "item": [
+        {
+          "name": "Crear cliente interno",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{internalCustomerId}}\",\n  \"firstName\": \"Internal\",\n  \"lastName\": \"Client\",\n  \"email\": \"internal.client@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{gatewayBaseUrl}}/api/v1/customers/internal",
+            "description": "Endpoint interno sin autenticación de servicio en esta versión educativa. El gateway lo enruta mediante /api/v1/customers/**."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status 201', function () { pm.response.to.have.status(201); });"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eliminar cliente interno (rollback)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "DELETE",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/customers/internal/{{internalCustomerId}}",
+            "description": "Compensación interna usada si falla el alta de credenciales."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status 204', function () { pm.response.to.have.status(204); });"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/customers/{{userId}}",
+            "description": "Un CUSTOMER puede consultar su propio id; SUPPORT o ADMIN pueden consultar otros usuarios."
+          }
+        },
+        {
+          "name": "Actualizar cliente",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Postman Updated\",\n  \"lastName\": \"User\",\n  \"email\": \"{{email}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{gatewayBaseUrl}}/api/v1/customers/{{userId}}",
+            "description": "Un CUSTOMER puede actualizar su propio perfil; ADMIN puede actualizar otros."
+          }
+        },
+        {
+          "name": "Desactivar cliente",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/customers/{{userId}}",
+            "description": "Requiere user:deactivate:any (ADMIN)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status 204', function () { pm.response.to.have.status(204); });"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BankingController - Cuentas y transacciones",
+      "description": "Cuentas, depósitos, retiros, movimientos y endpoints internos de contabilización.",
+      "item": [
+        {
+          "name": "Abrir cuenta origen (USD)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountType\": \"CHECKING\",\n  \"currency\": \"{{sourceCurrency}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{gatewayBaseUrl}}/api/v1/users/{{userId}}/accounts",
+            "description": "Acepta accountType CHECKING o SAVINGS y currency USD, EUR o PEN. Guarda el id en sourceAccountId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) pm.collectionVariables.set('sourceAccountId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Abrir cuenta destino (PEN)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountType\": \"SAVINGS\",\n  \"currency\": \"{{destinationCurrency}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{gatewayBaseUrl}}/api/v1/users/{{userId}}/accounts",
+            "description": "Segundo ejemplo del mismo endpoint para preparar una transferencia FX. Guarda el id en destinationAccountId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) pm.collectionVariables.set('destinationAccountId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar cuentas de usuario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/users/{{userId}}/accounts"
+          }
+        },
+        {
+          "name": "Consultar cuenta",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/accounts/{{sourceAccountId}}"
+          }
+        },
+        {
+          "name": "Congelar cuenta",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/accounts/{{sourceAccountId}}/freeze",
+            "description": "Requiere account:freeze:any (SUPPORT o ADMIN)."
+          }
+        },
+        {
+          "name": "Descongelar cuenta",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/accounts/{{sourceAccountId}}/unfreeze",
+            "description": "Requiere account:unfreeze:any (SUPPORT o ADMIN)."
+          }
+        },
+        {
+          "name": "Cerrar cuenta",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/accounts/{{sourceAccountId}}/close",
+            "description": "El propietario puede cerrar su cuenta; úsala al final porque una cuenta cerrada no puede reactivarse."
+          }
+        },
+        {
+          "name": "Depositar",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1000.0000,\n  \"description\": \"Initial Postman deposit\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{gatewayBaseUrl}}/api/v1/accounts/{{sourceAccountId}}/deposits",
+            "description": "Guarda el movimiento creado en transactionId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) pm.collectionVariables.set('transactionId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Retirar",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 25.0000,\n  \"description\": \"ATM withdrawal from Postman\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{gatewayBaseUrl}}/api/v1/accounts/{{sourceAccountId}}/withdrawals"
+          }
+        },
+        {
+          "name": "Listar transacciones de cuenta",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/accounts/{{sourceAccountId}}/transactions"
+          }
+        },
+        {
+          "name": "Consultar transacción",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/transactions/{{transactionId}}"
+          }
+        },
+        {
+          "name": "Consultar cuenta interna",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/internal/accounts/{{sourceAccountId}}",
+            "description": "Endpoint interno sin autenticación de servicio en esta versión educativa. El gateway lo enruta explícitamente a Banking."
+          }
+        },
+        {
+          "name": "Crear posting interno",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"commandId\": \"{{commandId}}\",\n  \"sourceAccountId\": \"{{sourceAccountId}}\",\n  \"destinationAccountId\": \"{{destinationAccountId}}\",\n  \"sourceAmount\": 10.0000,\n  \"destinationAmount\": 37.5000,\n  \"reference\": \"POSTMAN-INTERNAL-001\",\n  \"description\": \"Internal posting example\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{gatewayBaseUrl}}/api/v1/internal/postings",
+            "description": "Endpoint interno e idempotente por commandId. Debita la cuenta origen y acredita la cuenta destino; el gateway lo enruta explícitamente a Banking."
+          }
+        }
+      ]
+    },
+    {
+      "name": "TransferController - Transferencias",
+      "description": "Creación idempotente y consulta de transferencias.",
+      "item": [
+        {
+          "name": "Crear transferencia",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceAccountId\": \"{{sourceAccountId}}\",\n  \"destinationAccountId\": \"{{destinationAccountId}}\",\n  \"amount\": {{amount}},\n  \"description\": \"Postman FX transfer\",\n  \"idempotencyKey\": \"{{idempotencyKey}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{gatewayBaseUrl}}/api/v1/transfers",
+            "description": "Devuelve 201 al crear o 200 al repetir exactamente la misma solicitud. Cambia idempotencyKey si modificas el payload. Guarda el id en transferId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 o 201', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if ([200, 201].includes(pm.response.code)) pm.collectionVariables.set('transferId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar transferencia",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/transfers/{{transferId}}"
+          }
+        },
+        {
+          "name": "Listar transferencias",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/transfers",
+            "description": "CUSTOMER ve las propias; un token con transfer:read:any ve todas."
+          }
+        }
+      ]
+    },
+    {
+      "name": "ExchangeRateController - Tipos de cambio",
+      "description": "El mismo controlador publica una ruta protegida y otra interna. Monedas soportadas: USD, EUR y PEN.",
+      "item": [
+        {
+          "name": "Cotizar tipo de cambio público",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/exchange-rates/quote?source={{sourceCurrency}}&destination={{destinationCurrency}}&amount={{amount}}",
+            "description": "Requiere Bearer token."
+          }
+        },
+        {
+          "name": "Cotizar tipo de cambio interno",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/api/v1/internal/exchange-rates/quote?source={{sourceCurrency}}&destination={{destinationCurrency}}&amount={{amount}}",
+            "description": "Endpoint interno sin autenticación de servicio en esta versión educativa. El gateway lo enruta explícitamente a Exchange Rate."
+          }
+        }
+      ]
+    }
+  ]
+}
