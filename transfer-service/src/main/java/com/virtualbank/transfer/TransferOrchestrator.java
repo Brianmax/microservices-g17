@@ -6,7 +6,12 @@ import java.security.MessageDigest;
 import java.sql.Timestamp;
 import java.time.*;
 import java.util.*;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.circuitbreaker.CircuitBreaker;
+import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.*;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -21,14 +26,17 @@ class TransferOrchestrator {
   private final JdbcClient db;
   private final RestClient banking;
   private final RestClient rates;
+  private final CircuitBreaker exchangeRateCircuitBreaker;
 
   TransferOrchestrator(
-      JdbcClient db,
-      RestClient.Builder rest,
-      @Value("${services.banking.base-url}") String bankingUrl,
-      @Value("${services.exchange-rate.base-url}") String rateUrl) {
+          JdbcClient db,
+          RestClient.Builder rest,
+          @Value("${services.banking.base-url}") String bankingUrl,
+          @Value("${services.exchange-rate.base-url}") String rateUrl,
+          CircuitBreakerFactory<?, ?> exchangeRateCircuitBreaker) {
     this.db = db;
-    this.banking = rest.baseUrl(bankingUrl).build();
+      this.exchangeRateCircuitBreaker = exchangeRateCircuitBreaker.create("exchangeRateService");
+      this.banking = rest.baseUrl(bankingUrl).build();
     this.rates = rest.baseUrl(rateUrl).build();
   }
 
@@ -166,17 +174,33 @@ class TransferOrchestrator {
   }
 
   private Quote quote(String source, String destination, BigDecimal amount) {
-    return rates
-        .get()
-        .uri(
-            u ->
-                u.path("/api/v1/internal/exchange-rates/quote")
-                    .queryParam("source", source)
-                    .queryParam("destination", destination)
-                    .queryParam("amount", amount)
-                    .build())
-        .retrieve()
-        .body(Quote.class);
+    return exchangeRateCircuitBreaker.run(
+            () -> rates
+                    .get()
+                    .uri(
+                            u -> u.path("/api/v1/internal/exchange-rates/quote")
+                                    .queryParam("source", source)
+                                    .queryParam("destination", destination)
+                                    .queryParam("amount", amount)
+                                    .build()
+                    )
+                    .retrieve()
+                    .body(Quote.class),
+            this::exchangeRateFallback
+    );
+  }
+
+  private Quote exchangeRateFallback(Throwable failure) {
+    Throwable cause = failure;
+    while((cause instanceof CompletionException || cause instanceof ExecutionException)
+      && cause.getCause() != null) {
+      cause = cause.getCause();
+    }
+
+    if(cause instanceof RestClientResponseException response && response.getStatusCode().is4xxClientError()) {
+      throw response;
+    }
+    throw new ExchangeRateUnavailableException(cause);
   }
 
   private void fail(UUID id, String reason) {
@@ -238,6 +262,12 @@ class TransferOrchestrator {
               MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
     } catch (Exception e) {
       throw new IllegalStateException(e);
+    }
+  }
+
+  private static final class ExchangeRateUnavailableException extends RuntimeException {
+    ExchangeRateUnavailableException(Throwable cause) {
+      super("Exchange rate service no esta disponible", cause);
     }
   }
 
